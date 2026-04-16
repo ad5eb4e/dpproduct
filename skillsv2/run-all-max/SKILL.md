@@ -49,7 +49,7 @@ argument-hint: "<competitor-url> [competitor-url-2] [目标市场] [销售平台
 
 ### Stage 1-3：复用 run-all-auto 的完整流程
 
-1. 读取 `skills/run-all-auto/SKILL.md` 的 Stage 1-3 指令
+1. 读取 `skillsv2/run-all-auto/SKILL.md` 的 Stage 1-3 指令
 2. 按其完整执行：
    - Stage 1：产品调研 → `{产品名}_市场调研报告.txt` + `.html`
    - Stage 2：文案生成 → `{产品名}_Landing_Page_Copy_Final.md`（此为 v1）
@@ -91,7 +91,7 @@ current_version = "v1"
 
 **Sub-Stage 5.A：优化**
 
-1. 读取 `skills/copy-optimize/SKILL.md`（注意：位于 skillsv2 目录或同级 skills 目录）
+1. 读取 `skillsv2/copy-optimize/SKILL.md`
 2. spawn **Optimize Agent**，传入：
    - 当前文案文件：`{产品名}_Copy_{current_version}.md`
    - 当前对比报告：`{产品名}_对比报告_{current_version}.md`
@@ -114,7 +114,7 @@ current_version = "v1"
 
 **Sub-Stage 5.B：验证**
 
-1. 读取 `skills/copy-compare/SKILL.md`（同 run-all-auto 的 Stage 3）
+1. 读取 `skillsv2/copy-compare/SKILL.md`（同 run-all-auto 的 Stage 3）
 2. spawn **Compare Agent**，对比新版本文案 vs 竞品：
    - 我方文案：`{产品名}_Copy_{next_version}.md`
    - 竞品URL：原始竞品URL列表
