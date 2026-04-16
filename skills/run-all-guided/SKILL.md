@@ -1,30 +1,39 @@
 ---
 name: run-all-guided
-description: 半自动产品营销流水线（含确认暂停）。输入产品URL和竞品URL，分3阶段执行：调研→文案→竞品对比，每阶段结束后暂停等用户确认再继续。Use when user mentions "半自动", "分步跑", "run guided", or wants to review output between stages.
+description: 半自动产品营销流水线（含确认暂停）。输入竞品URL，分3阶段执行：调研→文案→竞品对比，每阶段结束后暂停等用户确认再继续。Use when user mentions "半自动", "分步跑", "run guided", or wants to review output between stages.
 disable-model-invocation: false
-argument-hint: "<product-url> <competitor-url> [competitor-url-2] [目标市场] [销售平台]"
+argument-hint: "<competitor-url> [competitor-url-2] [目标市场] [销售平台]"
 ---
 
 # 半自动产品营销流水线（含确认暂停）
 
 ## 概述
 
-串联3个skill分阶段执行，每阶段结束后暂停等用户确认：
-1. `/product-research` → 产品调研报告 → **⏸️ 用户确认**
-2. `/landing-page` → 落地页文案（Writer-Reviewer 3轮循环）→ **⏸️ 用户确认**
-3. `/copy-compare` → 竞品对比分析 → 完成
+输入竞品落地页URL，串联3个skill分阶段执行，每阶段结束后暂停等用户确认：
+1. `/product-research` → 分析竞品页面，生成调研报告 → **⏸️ 用户确认**
+2. `/landing-page` → 基于调研报告，生成我方文案（Writer-Reviewer 3轮循环）→ **⏸️ 用户确认**
+3. `/copy-compare` → 将我方文案与竞品原始页面对比 → 完成
+
+## 核心逻辑
+
+**竞品URL = 调研对象 = 最终对比对象。** 我们卖的是同类/同款产品，所以：
+- 从竞品页面提取产品信息（成分、价格、卖点、评价等）
+- 基于提取的信息生成我们自己的文案
+- 最后拿我们的文案和竞品原始页面做销售力对比
 
 ## 使用方式
 
 ```
-/run-all-guided https://product-url.com https://competitor-url.com
-/run-all-guided https://amazon.com/dp/XXXXX https://competitor1.com https://competitor2.com 澳洲市场 Facebook
+/run-all-guided https://competitor-url.com
+/run-all-guided https://competitor-url.com/adv https://competitor-url.com/product
+/run-all-guided https://competitor-url.com/adv https://competitor-url.com/product 澳洲市场 Facebook
 ```
 
 ## 输入参数
 
-- **必须**：至少1个产品URL + 至少1个竞品URL
-- **可选**：多个竞品URL、目标市场、销售平台、补充说明
+- **必须**：至少1个竞品URL
+- **可选**：第2个竞品URL（竞品有2个页面时，如Advertorial页+产品页，全部提供）、目标市场、销售平台、补充说明
+- **注意**：竞品可能有2个页面（广告文章页 + 产品详情页），构成完整销售漏斗，如果有请全部提供
 
 ## ⚠️ 半自动模式说明
 

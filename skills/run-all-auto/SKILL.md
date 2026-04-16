@@ -1,30 +1,39 @@
 ---
 name: run-all-auto
-description: 全自动产品营销流水线。输入产品URL和竞品URL，一键跑完：调研→文案（含3轮Writer-Reviewer循环）→竞品对比，中间不暂停。Use when user mentions "全自动", "一键跑", "run all auto", or wants the full pipeline without interruption.
+description: 全自动产品营销流水线。输入竞品URL，一键跑完：调研→文案（含3轮Writer-Reviewer循环）→竞品对比，中间不暂停。Use when user mentions "全自动", "一键跑", "run all auto", or wants the full pipeline without interruption.
 disable-model-invocation: false
-argument-hint: "<product-url> <competitor-url> [competitor-url-2] [目标市场] [销售平台]"
+argument-hint: "<competitor-url> [competitor-url-2] [目标市场] [销售平台]"
 ---
 
 # 全自动产品营销流水线
 
 ## 概述
 
-一键串联3个skill，全程无暂停自动执行：
-1. `/product-research` → 产品调研报告
-2. `/landing-page` → 落地页文案（Writer-Reviewer 3轮循环）
-3. `/copy-compare` → 竞品对比分析
+输入竞品落地页URL，一键串联3个skill，全程无暂停自动执行：
+1. `/product-research` → 分析竞品页面，生成产品调研报告
+2. `/landing-page` → 基于调研报告，生成我方落地页文案（Writer-Reviewer 3轮循环）
+3. `/copy-compare` → 将我方生成的文案与竞品原始页面对比
+
+## 核心逻辑
+
+**竞品URL = 调研对象 = 最终对比对象。** 我们卖的是同类/同款产品，所以：
+- 从竞品页面提取产品信息（成分、价格、卖点、评价等）
+- 基于提取的信息生成我们自己的文案
+- 最后拿我们的文案和竞品原始页面做销售力对比
 
 ## 使用方式
 
 ```
-/run-all-auto https://product-url.com https://competitor-url.com
-/run-all-auto https://amazon.com/dp/XXXXX https://competitor1.com https://competitor2.com 澳洲市场 Facebook
+/run-all-auto https://competitor-url.com
+/run-all-auto https://competitor-url.com/adv https://competitor-url.com/product
+/run-all-auto https://competitor-url.com/adv https://competitor-url.com/product 澳洲市场 Facebook
 ```
 
 ## 输入参数
 
-- **必须**：至少1个产品URL + 至少1个竞品URL
-- **可选**：多个竞品URL、目标市场、销售平台、补充说明
+- **必须**：至少1个竞品URL
+- **可选**：第2个竞品URL（竞品有2个页面时，如Advertorial页+产品页，全部提供）、目标市场、销售平台、补充说明
+- **注意**：竞品可能有2个页面（广告文章页 + 产品详情页），构成完整销售漏斗，如果有请全部提供
 
 ## ⚠️ 全自动模式说明
 
