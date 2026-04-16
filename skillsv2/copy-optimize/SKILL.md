@@ -58,7 +58,7 @@ argument-hint: "<current-copy-file> <compare-report-file> [version-tag]"
 
 **当前文案**：请读取：{当前文案文件路径}
 **对比报告**：请读取：{对比报告文件路径}
-**写作规范**：请读取：C:/Users/adao/productcr/skills/landing-page/WRITER.md
+**写作规范**：请读取：C:/Users/adao/productcr/skillsv2/landing-page/WRITER.md
 
 ## 优化执行要求
 
