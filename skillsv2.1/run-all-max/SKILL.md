@@ -148,7 +148,7 @@ current_version = "v1"
 
 **Sub-Stage 5.A：优化**
 
-1. 读取 `skillsv2/copy-optimize/SKILL.md`
+1. 读取 `skillsv2.1/copy-optimize/SKILL.md`
 2. spawn **Optimize Agent**，传入：
    - 当前文案文件：`{产品名}_Copy_{current_version}.md`
    - 当前对比报告：`{产品名}_对比报告_{current_version}.md`

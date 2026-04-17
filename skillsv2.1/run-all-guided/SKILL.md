@@ -48,7 +48,7 @@ argument-hint: "<competitor-url> [competitor-url-2] [目标市场] [销售平台
 
 ### Stage 1：产品调研
 
-1. 读取 `skillsv2/product-research/SKILL.md` 获取调研指令
+1. 读取 `skillsv2.1/product-research/SKILL.md` 获取调研指令
 2. spawn **Research Agent**，传入：
    - 竞品URL（用户提供的所有竞品页面URL）
    - 目标市场、销售平台等补充信息
@@ -80,7 +80,7 @@ C. 停在这里，后续手动跑 → 结束
 
 ### Stage 2：落地页文案
 
-1. 读取 `skillsv2/landing-page/SKILL.md` 获取编排指令
+1. 读取 `skillsv2.1/landing-page/SKILL.md` 获取编排指令
 2. 按 landing-page/SKILL.md 的7个Stage执行完整的Writer-Reviewer 3轮循环：
    - Stage 1: spawn Writer Agent → 生成初稿
    - Stage 2-6: 3轮 Reviewer↔Writer 循环
@@ -112,7 +112,7 @@ D. 停在这里，后续手动跑 → 结束
 
 ### Stage 3：竞品对比
 
-1. 读取 `skillsv2/copy-compare/SKILL.md` 获取对比指令
+1. 读取 `skillsv2.1/copy-compare/SKILL.md` 获取对比指令
 2. spawn **Compare Agent**，传入：
    - 我方文案：`{产品名}_Landing_Page_Copy_Final.md`
    - 竞品URL：用户提供的竞品URL（可以多个）

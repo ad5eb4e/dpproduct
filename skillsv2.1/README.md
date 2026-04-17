@@ -21,13 +21,16 @@
 
 主要升级基线（继承自 v2）：新增"对比→优化→对比"的自动迭代循环能力。
 
-## 与 skills 的区别
+## 与更早版本的区别
 
-| 对比项 | skills | skillsv2 |
-|--------|--------|----------|
-| 模块数量 | 5 个 | 7 个（新增 2 个） |
-| 自动迭代 | ❌ | ✅ |
-| 向后兼容 | 原命令 | 原命令 + 新命令 |
+| 对比项 | skills (v1) | skillsv2 (v2.0) | skillsv2.1 (本版本) |
+|--------|------------|-----------------|--------------------|
+| 模块数量 | 5 个 | 7 个（新增 2 个） | 7 个（同 v2.0） |
+| 自动迭代 | ❌ | ✅ | ✅ |
+| 多样本聚合 | ❌ | ❌ | ✅（N=3 中位数） |
+| CLEAR_WIN 稳定性校验 | ❌ | ❌ | ✅ |
+| 防递归/防覆盖/防老格式误读 | ❌ | ❌ | ✅ |
+| 向后兼容 | 原命令 | 原命令 + 新命令 | 原命令 + 新命令（skill name 同 v2.0） |
 
 ## 文件清单
 
@@ -71,7 +74,7 @@
 
 ### 老习惯：继续用 skills 的命令
 
-所有原 skills 的命令在 skillsv2 中行为完全一致（修改仅限内部路径引用），可以无感切换。
+所有原 skills 的命令在 skillsv2.1 中**单独调用**时，行为与 skills/skillsv2 完全一致（除了 `/copy-compare` 新增了 `aggregation_mode=N` 可选参数，不传参时是旧行为）。可以无感切换。
 
 ## 停止条件
 
@@ -104,17 +107,19 @@
 
 ## 安装
 
-把整个 `skillsv2/` 文件夹放到你的 Claude skills 目录下（如 `~/.claude/skills/` 或项目本地 `.claude/skills/`），即可使用。
+把整个 `skillsv2.1/` 文件夹里的**所有子目录**（7 个）放到你的 Claude skills 目录下（如 `~/.claude/skills/` 或项目本地 `.claude/skills/`），即可使用。
+
+⚠️ **不要同时安装 skillsv2 和 skillsv2.1**：两个版本里的 skill 文件用的是相同的 `name:`（`copy-compare`、`run-all-max` 等），同时装会被 Claude 视为重复 skill 报错。安装前请先删除旧的 skillsv2 或直接替换。
 
 ## 文件关系图
 
 ```
-skillsv2/
+skillsv2.1/
 ├── product-research/     ◄─┐
 ├── landing-page/         ◄─┤
 ├── copy-compare/         ◄─┼─ 被 run-all-auto / run-all-max 调用
-├── copy-optimize/        ◄─┤
-├── run-all-auto/         ◄─┘  （调研 + 文案 + 对比）
-├── run-all-guided/            （半自动版）
-└── run-all-max/               （run-all-auto + 迭代循环）
+├── copy-optimize/        ◄─┤    （copy-compare 支持 aggregation_mode=N）
+├── run-all-auto/         ◄─┘    （调研 + 文案 + 对比，沿用单样本）
+├── run-all-guided/            （半自动版，沿用单样本）
+└── run-all-max/               （run-all-auto + 迭代循环，强制 aggregation_mode=3）
 ```
