@@ -9,15 +9,12 @@ argument-hint: "<competitor-url> [competitor-url-2] [目标市场] [销售平台
 
 ## 概述
 
-在 `/run-all-auto` 的基础上，自动执行"优化→对比"循环，最多 2 轮。**所有 Compare 环节默认启用 copy-compare 的多样本聚合模式（aggregation_mode=3）**，用 3 个独立 Agent 并行打分取中位数，降低单次主观判断 + WebFetch 切片差异带来的评分噪声。
+在 `/run-all-auto` 的基础上，自动执行"优化→对比"循环，最多 2 轮，直到命中任一停止条件：
+1. 我方领先竞品 +8 分以上（明显领先）
+2. 连续 2 轮提分 < 2 分（边际收益收敛）
+3. 达到最大迭代轮数 2（兜底封顶）
 
-停机条件（命中任一即停止迭代）：
-1. **CLEAR_WIN**：中位数领先 >= 8 分 **AND** 至少 2/3 样本领先 >= 5 分（稳定性校验）
-2. **PLATEAU**：连续 2 轮中位数提分 < 2 分（边际收益收敛）
-3. **MAX_ROUNDS**：达到最大迭代轮数 2（兜底封顶）
-4. **LOW_CONFIDENCE**：连续 2 轮竞品样本离散度 > 6 分（打分不稳定，继续迭代没意义，建议人工介入）
-
-最终输出 3 个版本（v1/v2/v3）的完整文案 + 聚合对比报告 + 得分追踪表，供用户选择最优版本投放。
+最终输出 3 个版本（v1/v2/v3）的完整文案 + 对比报告 + 得分追踪表，供用户选择最优版本投放。
 
 ## 与 run-all-auto 的区别
 
@@ -50,49 +47,26 @@ argument-hint: "<competitor-url> [competitor-url-2] [目标市场] [销售平台
 
 ## 执行流程
 
-### Stage 1-2：复用 run-all-auto 的 Stage 1-2
+### Stage 1-3：复用 run-all-auto 的完整流程
 
-1. 读取 `skillsv2/run-all-auto/SKILL.md` 的 Stage 1-2 指令
+1. 读取 `skillsv2/run-all-auto/SKILL.md` 的 Stage 1-3 指令
 2. 按其完整执行：
    - Stage 1：产品调研 → `{产品名}_市场调研报告.txt` + `.html`
    - Stage 2：文案生成 → `{产品名}_Landing_Page_Copy_Final.md`（此为 v1）
-3. 将 Stage 2 输出拷贝为 `{产品名}_Copy_v1.md`（保持 run-all-auto 兼容路径不动）
+   - Stage 3：竞品对比 → `{产品名}_竞品对比报告.md`（此为对比_v1）
 
-### Stage 3：v1 竞品对比（多样本聚合模式）
-
-⚠️ **不复用 run-all-auto 的 Stage 3（单样本模式）**，改为直接调用 copy-compare 的**多样本聚合模式**。
-
-1. 读取 `skillsv2/copy-compare/SKILL.md`
-2. spawn **Compare Orchestrator Agent**，传入：
-   - 我方文案：`{产品名}_Copy_v1.md`
-   - 竞品 URL：用户提供的 URL 列表
-   - **aggregation_mode = 3**（关键参数）
-3. Orchestrator 按 copy-compare/SKILL.md 的"多样本聚合模式"章节执行：
-   - 并行 spawn 3 个独立 Compare sub-agent
-   - 每个 sub-agent 独立抓取竞品 + 独立打分
-   - 主 Orchestrator 聚合 3 份结果（中位数 + 离散度 + 共识信号）
-4. 产出：
-   - 主文件：`{产品名}_对比报告_v1.md`（包含多样本分布表 + 中位数得分 + 置信度）
-   - 附件：`{产品名}_对比报告_v1_sample1.md` / `_sample2.md` / `_sample3.md`
+3. **规范化文件命名**：
+   - 将 Stage 2 输出拷贝为 `{产品名}_Copy_v1.md`
+   - 将 Stage 3 输出拷贝为 `{产品名}_对比报告_v1.md`
+   - 原文件保留不动（保持 run-all-auto 的向后兼容）
 
 ### Stage 4：决策点 ①（首次停止判定）
 
-读取 `{产品名}_对比报告_v1.md`，提取：
-- 我方中位数总分、竞品中位数总分
-- 3 个样本各自的我方/竞品得分（用于稳定性判定）
-- 置信度等级（高/中/低）
+读取 `{产品名}_对比报告_v1.md`，提取我方得分和竞品得分：
 
 ```
-lead_median = 我方中位数 - 竞品中位数
-samples_leading_5plus = 3 个样本中差值 >= +5 的样本数（0/1/2/3）
-competitor_dispersion = max(竞品样本) - min(竞品样本)
-
-IF lead_median >= 8 AND samples_leading_5plus >= 2:
-    stop_reason = "CLEAR_WIN"
-    → 跳到 Stage 7（已稳定明显领先，无需迭代）
-ELSE IF lead_median >= 8 AND samples_leading_5plus < 2:
-    stop_reason = "MEDIAN_WIN_UNSTABLE"
-    → 进入 Stage 5 继续迭代（中位数领先但不稳定，需要更稳的版本）
+IF (我方得分 - 竞品得分) >= 8:
+    → 跳到 Stage 7（已明显领先，无需迭代）
 ELSE:
     → 进入 Stage 5（开始迭代循环）
 ```
@@ -138,51 +112,36 @@ current_version = "v1"
 {产品名}_Copy_{next_version}.md
 ```
 
-**Sub-Stage 5.B：验证（多样本聚合模式）**
+**Sub-Stage 5.B：验证**
 
-1. 读取 `skillsv2/copy-compare/SKILL.md`
-2. spawn **Compare Orchestrator Agent**，**aggregation_mode = 3**（与 Stage 3 同规格）：
+1. 读取 `skillsv2/copy-compare/SKILL.md`（同 run-all-auto 的 Stage 3）
+2. spawn **Compare Agent**，对比新版本文案 vs 竞品：
    - 我方文案：`{产品名}_Copy_{next_version}.md`
-   - 竞品 URL：原始竞品 URL 列表
-3. Orchestrator 并行 spawn 3 个独立 Compare sub-agent，独立抓取 + 打分
-4. 产出：
-   - 主文件：`{产品名}_对比报告_{next_version}.md`（中位数得分 + 多样本分布表 + 置信度）
-   - 附件：`{产品名}_对比报告_{next_version}_sample{1,2,3}.md`
-5. 提取本轮中位数得分和稳定性指标，计算 `score_gain = 本轮我方中位数 - 上轮我方中位数`
-6. 更新：
+   - 竞品URL：原始竞品URL列表
+3. 产出：`{产品名}_对比报告_{next_version}.md`
+4. 提取本轮得分，计算 `score_gain = new_score - prev_score`
+5. 更新：
    ```
    prev_gain = last_gain
    last_gain = score_gain
-   prev_dispersion = last_dispersion
-   last_dispersion = competitor_dispersion
    iterate_count++
    current_version = next_version
    ```
 
 **Sub-Stage 5.C：决策点 ②（循环内停止判定）**
 
-按优先级检查 4 条停止条件（任一命中就跳出循环）：
+检查 3 条停止条件（任一命中就跳出循环）：
 
 ```
-lead_median = 本轮我方中位数 - 本轮竞品中位数
-samples_leading_5plus = 本轮 3 个样本中差值 >= +5 的样本数
-
-IF lead_median >= 8 AND samples_leading_5plus >= 2:
-    stop_reason = "CLEAR_WIN"                # 稳定领先
+IF (我方得分 - 竞品得分) >= 8:
+    stop_reason = "CLEAR_WIN"
     break
-
 ELSE IF iterate_count >= max_rounds:
-    stop_reason = "MAX_ROUNDS"                # 兜底封顶
+    stop_reason = "MAX_ROUNDS"
     break
-
 ELSE IF last_gain < 2 AND prev_gain < 2:
-    stop_reason = "PLATEAU"                   # 边际收益收敛
+    stop_reason = "PLATEAU"
     break
-
-ELSE IF last_dispersion > 6 AND prev_dispersion > 6:
-    stop_reason = "LOW_CONFIDENCE"            # 连续 2 轮打分不稳定
-    break
-
 ELSE:
     continue loop
 ```
@@ -194,28 +153,21 @@ ELSE:
 ### Stage 7：输出总结
 
 ```
-## 迭代优化流水线执行完成（多样本聚合模式 N=3）
+## 迭代优化流水线执行完成
 
-### 版本得分追踪（中位数）
-| 版本 | 我方(中位数) | 竞品(中位数) | 差值 | 本轮提分 | 3样本分布(我方) | 3样本分布(竞品) | 置信度 |
-|------|------------|------------|------|---------|---------------|---------------|-------|
-| v1  | X   | X   | ±X | -    | X/X/X | X/X/X | 高/中/低 |
-| v2  | X   | X   | ±X | +X   | X/X/X | X/X/X | 高/中/低 |
-| v3  | X   | X   | ±X | +X   | X/X/X | X/X/X | 高/中/低 |
-| **推荐** | **v{N}** | - | **±X** | - | - | - | ⭐ 最高中位数 |
-
-### 稳定性校验
-- v{N} 中 3 个样本领先差值：{X, X, X}
-- 领先 >= +5 分的样本数：{0/1/2/3}
-- 竞品分数离散度：{X 分}（<= 3 分为高置信度）
+### 版本得分追踪
+| 版本 | 得分 | vs 竞品 | 本轮提分 | 状态 |
+|------|-----|--------|---------|------|
+| v1  | X   | ±X     | -       | 初稿 |
+| v2  | X   | ±X     | +X      | 1轮优化后 |
+| v3  | X   | ±X     | +X      | 2轮优化后 |
+| **推荐** | **v{N}** | **±X** | - | ⭐ 最高得分 |
 
 ### 停机原因
 {根据 stop_reason 输出对应说明}
-- CLEAR_WIN：✅ 中位数领先 >= 8 AND 至少 2/3 样本领先 >= 5 → 稳定明显领先
-- MEDIAN_WIN_UNSTABLE：⚠️ 中位数领先 >= 8 但稳定性不够 → 已继续迭代
-- PLATEAU：⏹️ 连续 2 轮中位数提分 < 2 → 边际收益收敛
+- CLEAR_WIN：✅ 我方 X 分 > 竞品 X 分 + 8 分 → 明显领先
+- PLATEAU：⏹️ 连续 2 轮提分 < 2 分 → 边际收益收敛
 - MAX_ROUNDS：🔒 达到最大迭代轮数 2 → 兜底停机
-- LOW_CONFIDENCE：⚠️ 连续 2 轮竞品样本离散度 > 6 分 → 打分不稳定，建议人工复核
 
 ### 生成的文件
 | 文件 | 用途 |
@@ -223,18 +175,16 @@ ELSE:
 | {产品名}_市场调研报告.txt / .html | 调研报告 |
 | {产品名}_Copy_v1.md / v2.md / v3.md | 各版本文案 |
 | {产品名}_Landing_Page_Copy_Final.md | 推荐版本副本 |
-| {产品名}_对比报告_v1.md / v2.md / v3.md | 各版本聚合对比报告（中位数 + 分布） |
-| {产品名}_对比报告_v{1,2,3}_sample{1,2,3}.md | 每轮 3 个样本的独立报告（查证用） |
+| {产品名}_对比报告_v1.md / v2.md / v3.md | 各版本对比报告 |
 
 ### 推荐使用版本：v{N}
 理由：{根据停机原因和得分自动生成}
 
 ### 下一步建议
 {根据停机原因给出不同建议}
-- CLEAR_WIN：v{N} 已稳定明显领先，建议进入 A/B 投放测试阶段。
+- CLEAR_WIN：v{N} 已明显领先竞品，建议进入 A/B 测试阶段。
 - PLATEAU：文案微调已达边际收益，用真实投放数据做最终判定。
-- MAX_ROUNDS (且仍未稳定领先)：建议手动检查调研报告定位，或继续跑 /copy-optimize 尝试突破。
-- LOW_CONFIDENCE：3 次打分差距过大，建议把 aggregation_mode 提到 5 重跑一轮，或人工读 3 份 sample 报告手动判定。
+- MAX_ROUNDS (且仍未领先)：建议手动检查调研报告定位，或继续跑 /copy-optimize 尝试突破。
 ```
 
 ---
@@ -251,19 +201,12 @@ ELSE:
 
 ## 设计说明
 
-### 为什么采用多样本聚合（N=3）
+### 为什么是"只加不改"
 
-实测发现单样本 Compare 模式下，同一个竞品在 3 次独立 Agent 打分中最大漂移达 **6 分**，来源包括：
-- Agent 主观判断差异（5 维度权重的个体解读不同）
-- WebFetch 抓取切片差异（每次返回的摘要内容可能不完全相同）
-- 相对比较的锚定效应（我方分数变化会牵动 Agent 对竞品的隐性重定位）
-
-对 "+8 分 = CLEAR_WIN" 这种阈值决策，±6 分漂移意味着单样本判定可能直接翻车。多样本聚合通过：
-- 并行 3 次独立打分 + 取中位数 → 消除单个 Agent 的主观偏差
-- 离散度统计 → 显式暴露置信度，低置信度触发停机或人工介入
-- 稳定性条件（2/3 样本领先 >= 5） → 防止中位数被一次异常高分拉高
-
-并行执行使墙钟时间与单样本基本相同，仅 token 成本变 3 倍，性价比极高。
+本 skill 不修改 `run-all-auto`、`landing-page`、`copy-compare` 中的任何一个。这保证：
+- 用户继续用 `/run-all-auto` 行为完全不变
+- 如果本 skill 出问题，直接不用即可，不影响其他工作流
+- 代码路径清晰：`run-all-max` 只是调用了其他 skill 的完整流程，不做侵入性修改
 
 ### 为什么最多 2 轮
 
@@ -274,10 +217,6 @@ ELSE:
 
 到 v3 后继续迭代，还不如用真实投放数据做判断。因此 2 轮（生成到 v3）是性价比最高的默认值。
 
-### 为什么 "+8 分 + 稳定性校验" 作为 CLEAR_WIN 阈值
+### 为什么 "+8 分" 作为明显领先阈值
 
-5 维度 100 分制单样本噪声 ±3~6 分，多样本中位数能压到 ±1~2 分。+8 分超过 3 倍标准差，判定为"显著领先"而非随机波动。叠加"2/3 样本领先 >= 5"的稳定性条件，确保中位数不是被单次异常值顶上来的，而是跨样本共识。
-
-### 为什么本 skill 做了侵入式修改
-
-原本 run-all-max 是"只加不改，完全复用 run-all-auto"。但多样本聚合无法通过叠加实现——必须在 Compare 阶段就启用，所以 Stage 3 从"复用 run-all-auto Stage 3"改成"独立调用 copy-compare 多样本模式"。Stage 1-2 仍然复用 run-all-auto。这是一个**必要的范围收窄**，不影响 `/run-all-auto` 单独使用时的行为。
+评分系统本身有 ±2~3 分的噪声（不同 Reviewer 的主观差异），+8 分超过 3 倍标准差，可以较为可靠地判定为"显著领先"而非随机波动。
